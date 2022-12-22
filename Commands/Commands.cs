@@ -1,5 +1,4 @@
-﻿using Microsoft.Win32;
-using OpenQA.Selenium.Chrome;
+﻿using OpenQA.Selenium.Chrome;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -12,11 +11,46 @@ using System.Windows.Media.Media3D;
 using System.Windows;
 using OpenQA.Selenium;
 using System.Threading;
-using OpenQA.Selenium.DevTools;
-using OpenQA.Selenium.Interactions;
+using OpenQA.Selenium.Support.UI;
+using System.Diagnostics;
 
 namespace ETSYBUYER.Commands
 {
+    public static class WebDriverExtensions
+    {
+        public static IWebElement FindElement(this IWebDriver driver, By by, int timeoutInSeconds)
+        {
+            if (timeoutInSeconds > 0)
+            {
+                var wait = new WebDriverWait(driver, TimeSpan.FromSeconds(timeoutInSeconds));
+                return wait.Until(drv => drv.FindElement(by));
+            }
+            return driver.FindElement(by);
+        }
+        public static void ScrollToRandom(IWebDriver driver, int timeonpage)
+        {
+            long scrollHeight = 0;
+            IJavaScriptExecutor js1 = (IJavaScriptExecutor)driver;
+            var hight= (long)js1.ExecuteScript("return document.body.scrollHeight;");
+            Stopwatch stopWatch = new Stopwatch();
+            stopWatch.Start();
+            long newScrollHeight = 0;
+            do
+            {   
+                IJavaScriptExecutor js = (IJavaScriptExecutor)driver;
+                
+                newScrollHeight += hight / 10; 
+                js.ExecuteScript("window.scrollTo(0,'"+ newScrollHeight+"');");
+
+                if (stopWatch.ElapsedMilliseconds/1000 >= timeonpage)
+                {
+                    break;
+                }
+            } while (true);
+            stopWatch.Stop();
+        }
+       
+    }
     class ExcelHelper
     {
         /// <summary>
@@ -71,6 +105,7 @@ namespace ETSYBUYER.Commands
     }
     public class Commands
     {
+        static string ProfileFolder = "C:/Users/" + System.Environment.GetEnvironmentVariable("USERNAME") + "/AppData/Local/Google/Chrome/User Data";
         public static bool Login(User use, ChromeDriver driver)
         {
             //Click to sign in
@@ -128,7 +163,7 @@ namespace ETSYBUYER.Commands
                         // Get rows data from the sheet
                         IEnumerable<Row> rows = sheetData.Descendants<Row>();
                         // We only accept excel file that has 2 columns (layer name, color and transparency)
-                        if (rows.ElementAt(0).Descendants<Cell>().Count() != 2)
+                        if (rows.ElementAt(0).Descendants<Cell>().Count() != 1)
                         {
                             MessageBox.Show("File Format is wrong. File should have 3 column", "Warning");
                             return Output;
@@ -145,20 +180,15 @@ namespace ETSYBUYER.Commands
                             }
 
                             // Get cell value and paste into new Layer Item
-                            string User = ExcelHelper.GetCellValue(document, row.Descendants<Cell>().ElementAt(0));
+                            string profilepath = ExcelHelper.GetCellValue(document, row.Descendants<Cell>().ElementAt(0));
                             // Skip invalid name
-                            if (User == string.Empty)
+                            if (profilepath == string.Empty)
                             {
                                 continue;
                             }
-                            string Pass = ExcelHelper.GetCellValue(document, row.Descendants<Cell>().ElementAt(1));
-                            if (Pass == string.Empty)
-                            {
-                                continue;
-                            }
+                            
                             User user = new User();
-                            user.UserName = User;
-                            user.Password = Pass;
+                            user.ProfilePath = profilepath;
                             Output.Add(user);
                         }
 
@@ -173,20 +203,6 @@ namespace ETSYBUYER.Commands
             }
             return null;
         }
-        public static void CopyFilesRecursively(string sourcePath, string targetPath)
-        {
-            //Now Create all of the directories
-            foreach (string dirPath in Directory.GetDirectories(sourcePath, "*", SearchOption.AllDirectories))
-            {
-                Directory.CreateDirectory(dirPath.Replace(sourcePath, targetPath));
-            }
-
-            //Copy all the files & Replaces any files with the same name
-            foreach (string newPath in Directory.GetFiles(sourcePath, "*.*", SearchOption.AllDirectories))
-            {
-                File.Copy(newPath, newPath.Replace(sourcePath, targetPath), true);
-            }
-        }
         public static void GenerateChromeProfileCmd(object obj)
         {
             MainWindow v = obj as MainWindow;
@@ -195,34 +211,121 @@ namespace ETSYBUYER.Commands
                 MainWindowViewModels vm = v.DataContext as MainWindowViewModels;
                 for (int i = 0; i < vm.Users.Count(); i++)
                 {
-                    var username = System.Environment.GetEnvironmentVariable("USERNAME");
-                    var ProfileFolder = "C:/Users/" + username + "/AppData/Local/Google/Chrome/User Data";
-                    if (!System.IO.Directory.Exists(ProfileFolder + "/" + vm.Users[i].UserName))
+                    try
                     {
-                        string chromeDriverPath = @"D:\ChromeDriver";
+                        //string ip = "";
+                        //string username = "mix101CUHDZ8C";
+                        //string pass = "diGifK30";
+                        var dir = AppDomain.CurrentDomain.BaseDirectory;
+                        string chromeDriverPath = dir + "ChromeDriver";
                         var options = new ChromeOptions();
-                        options.AddArgument("no-sandbox");
-                        //options.AddArgument("user-data-dir=D:\\ChromeDriver\\scoped_dir13972_618222406");
-                        options.AddArgument("headless");
-                        var driver = new ChromeDriver(chromeDriverPath, options, TimeSpan.FromDays(20));
-                        var profile = (IDictionary<string, object>)driver.Capabilities["chrome"];
-                        object x;
-                        profile.TryGetValue("userDataDir", out x);
-                        string tmp = x.ToString();
-                        if (System.IO.Directory.Exists(tmp))
+                        
+                        //if (!string.IsNullOrEmpty(ip))
+                        //{
+                        //    if (!string.IsNullOrEmpty(username) && !string.IsNullOrEmpty(pass))
+                        //    {
+                        //        options.AddExtension("ProxyAuth.crx");
+                        //    }
+                        //    options.AddArgument(string.Format("--proxy-server={0}", ip));
+                        //}
+
+                        if (!Directory.Exists(ProfileFolder))
                         {
-                            string url = "https://www.etsy.com/";
-                            driver.Url = url;
-                            //Login(vm.Users[i], driver);
-                            var folderDes = System.IO.Directory.CreateDirectory(ProfileFolder + "/" + vm.Users[i].UserName);
-                            CopyFilesRecursively(tmp, folderDes.FullName);
-                            driver.Quit();
+                            Directory.CreateDirectory(ProfileFolder);
                         }
+
+                        if (Directory.Exists(ProfileFolder))
+                        {
+                            options.AddArguments("user-data-dir=" + ProfileFolder + "/" + vm.Users[i].UserName);
+                        }
+                        var driver = new ChromeDriver(chromeDriverPath,options);
+                        //if (!string.IsNullOrEmpty(ip))
+                        //{
+                        //    if (!string.IsNullOrEmpty(username) && !string.IsNullOrEmpty(username))
+                        //    {
+                        //        driver.Url = "chrome-extension://ggmdpepbjljkkkdaklfihhngmmgmpggp/options.html";
+                        //        driver.Navigate();
+
+                        //        driver.FindElement(By.Id("login")).SendKeys(username);
+                        //        driver.FindElement(By.Id("password")).SendKeys(pass);
+                        //        driver.FindElement(By.Id("retry")).Clear();
+                        //        driver.FindElement(By.Id("retry")).SendKeys("2");
+
+                        //        driver.FindElement(By.Id("save")).Click();
+                        //    }
+                        //}
+                        string url = "https://www.whoer.net/";
+                        driver.Url = url;
+                        driver.Navigate().GoToUrl(url);
+                        driver.Quit();
+                        string lnkFileName = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), vm.Users[i].UserName+".lnk");
+                        Shortcut.Create(lnkFileName,
+                            @"C:\Program Files\Google\Chrome\Application\"+"chrome.exe",
+                            "--profile-directory="+ vm.Users[i].UserName, null, "Chrome Profile", "Ctrl+Shift+N", null);
+                        //if (!System.IO.Directory.Exists(ProfileFolder + "/" + vm.Users[i].UserName))
+                        //{
+                        //    var dir = AppDomain.CurrentDomain.BaseDirectory;
+                        //    string chromeDriverPath = dir + "ChromeDriver";
+                        //    var options = new ChromeOptions();
+                        //    options.AddArgument("no-sandbox");
+                        //    options.AddArgument("user-data-dir=D:\\ChromeDriver\\scoped_dir13972_618222406");
+                        //    options.AddArgument("headless");
+                        //    var driver = new ChromeDriver(chromeDriverPath, options, TimeSpan.FromDays(20));
+                        //    var profile = (IDictionary<string, object>)driver.Capabilities["chrome"];
+                        //    object x;
+                        //    profile.TryGetValue("userDataDir", out x);
+                        //    string tmp = x.ToString();
+                        //    if (System.IO.Directory.Exists(tmp))
+                        //    {
+                        //        string url = "https://www.etsy.com/";
+                        //        driver.Url = url;
+                        //        //Login(vm.Users[i], driver);
+                        //        var folderDes = System.IO.Directory.CreateDirectory(ProfileFolder + "/" + vm.Users[i].UserName);
+                        //        CopyFilesRecursively(tmp, folderDes.FullName);
+                        //        driver.Quit();
+                        //    }
+                        //}
                     }
+                    catch(System.Exception exx)
+                    {
+
+                    }
+                    
 
                 }
             }
 
+        }
+        public static bool IsLogin(ChromeDriver driver)
+        {
+            try
+            {
+                var signin = WebDriverExtensions.FindElement(driver, By.XPath("//*[@id=\"gnav-header-inner\"]/div[4]/nav/ul/li[1]/button"), 5);
+                return false;
+            }
+            catch(System.Exception ex)
+            {
+
+            }
+            
+            return true;
+        }
+        public static bool IsAdvertiseItem(ChromeDriver driver)
+        {
+            IWebElement ad = null;
+            try
+            {
+                ad = WebDriverExtensions.FindElement(driver, By.XPath("//*[@id=\"content\"]/div/div[1]/div/div[4]/div[11]/div[2]/div[10]/div[1]/div/div/ul/li[1]/div/div/a/div[2]/p[2]/span[2]"), 10);
+            }
+            catch (System.Exception ex)
+            {
+
+            }
+            if (ad == null)
+            {
+                return false;
+            }
+            return true;
         }
         public static void Run(object obj)
         {
@@ -232,88 +335,120 @@ namespace ETSYBUYER.Commands
                 MainWindowViewModels vm = v.DataContext as MainWindowViewModels;
                 for (int i = 0; i < vm.Loopnumber; i++)
                 {
-                    Random rand = new Random();
-                    int r = rand.Next(vm.Users.Count);
-                    User u = vm.Users[r];
-                    string chromeDriverPath = @"D:\ChromeDriver";
-                    var username = System.Environment.GetEnvironmentVariable("USERNAME");
-                    var ProfileFolder = "C:/Users/" + username + "/AppData/Local/Google/Chrome/User Data";
-                    var options = new ChromeOptions();
-                    options.AddArgument("no-sandbox");
-                    options.AddArgument("user-data-dir=" + ProfileFolder + "/" + u.UserName);
-                    //options.AddArgument("headless");
-                    var driver = new ChromeDriver(chromeDriverPath, options, TimeSpan.FromDays(20));
-
-                    string url = "https://www.etsy.com/";
-                    driver.Url = url;
-
-                    driver.Navigate().GoToUrl(url);
-                    //Click to sign in
-                    try
+                    foreach (var key in vm.SearchPair)
                     {
-                        var signin = driver.FindElement(By.XPath("//*[@id=\"gnav-header-inner\"]/div[4]/nav/ul/li[1]/button"));
-                        signin.Click();
-                        driver.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(10);
-                        //put user/pass then sigin
-                        var email = driver.FindElement(By.XPath("//*[@id=\"join_neu_email_field\"]"));
-                        email.SendKeys("huynhnx93@gmail.com");
-                        Thread.Sleep(1000);
-                        var password = driver.FindElement(By.XPath("//*[@id=\"join_neu_password_field\"]"));
-                        password.SendKeys("Nguyenhuynh1993");
-                        Thread.Sleep(1000);
-                        var submit = driver.FindElement(By.XPath("//*[@id=\"join-neu-form\"]/div[1]/div/div[7]/div/button"));
-                        submit.Click();
-                        Thread.Sleep(2000);
-                        driver.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(20);
-                    }
-                    catch (System.Exception ex)
-                    {
-
-                    }
-
-                    var search = driver.FindElement(By.XPath("//*[@id=\"global-enhancements-search-query\"]"));
-                    search.SendKeys("200k");
-                    Thread.Sleep(1000);
-                    var searchbtn = driver.FindElement(By.XPath("//*[@id=\"gnav-search\"]/div/div[1]/button[2]"));
-                    searchbtn.Click();
-                    Thread.Sleep(1000);
-                    var list = driver.FindElements(By.TagName("a"));
-                    bool bFound = false;
-                    foreach (WebElement el in list)
-                    {
-                        String link = el.GetAttribute("href");
-                        if (link != null && link.Contains("1230788601"))
+                        try
                         {
-                            IWebElement ad = null;
-                            try
-                            {
-                                ad = driver.FindElement(By.XPath("//*[@id=\"content\"]/div/div[1]/div/div[4]/div[11]/div[2]/div[10]/div[1]/div/div/ul/li[1]/div/div/a/div[2]/p[2]/span[2]"));
-                            }
-                            catch (System.Exception ex)
-                            {
+                            Random rand = new Random();
+                            int r = rand.Next(vm.Users.Count);
+                            User u = vm.Users[r];
+                            var chromeDriverPath = AppDomain.CurrentDomain.BaseDirectory;
+                            var username = System.Environment.GetEnvironmentVariable("USERNAME");
+                            var ProfileFolder = "C:/Users/" + username + "/AppData/Local/Google/Chrome/User Data";
+                            var options = new ChromeOptions();
+                            options.AddArgument("user-data-dir="+ ProfileFolder);
+                            options.AddArgument("profile-directory="+ u.ProfilePath);
+                            //options.AddArgument("headless");
+                            var driver = new ChromeDriver(chromeDriverPath,options);
+                            string url = "https://www.etsy.com/";
+                            driver.Url = url;
 
-                            }
+                            driver.Navigate().GoToUrl(url);
+                            //Chat rate
+                            var chatrand = new Random();
+                            var chatrandcollection = vm.Users.OrderBy(x => rand.Next(vm.Users.Count))
+                                                           .Take((int)((float)(vm.ChatRate/100) * vm.Users.Count)).ToList();
 
-                            if (ad == null)
+                            //favorite
+                            var favoriterand = new Random();
+                            var favoriteCollection = vm.Users.OrderBy(x => rand.Next(vm.Users.Count))
+                                                           .Take((int)((float)(vm.FavoriteRate / 100) * vm.Users.Count)).ToList();
+                            if (IsLogin(driver))
                             {
-                                bFound = true;
-                                driver.SwitchTo().Window(driver.WindowHandles.Last());
-                                driver.Navigate().GoToUrl(link);
-                                var element = driver.FindElement(By.XPath("//*[@id=\"collage-footer\"]/footer/div/div[2]/div/div/div[2]"));
-                                Actions actions = new Actions(driver);
-                                var fav = driver.FindElement(By.XPath("//*[@id=\"listing-right-column\"]/div/div[1]/div[1]/div/div/div[2]/div[1]/button"));
-                                fav.Click();
+                                //search item
+                                var search = WebDriverExtensions.FindElement(driver, By.XPath("//*[@id=\"global-enhancements-search-query\"]"), 20);
+                                search.SendKeys(key.SearchKey);
                                 Thread.Sleep(1000);
-                                actions.MoveToElement(element).Perform();
-                                break;
+                                var searchbtn = WebDriverExtensions.FindElement(driver, By.XPath("//*[@id=\"gnav-search\"]/div/div[1]/button[2]"), 10);
+                                searchbtn.Click();
+                                Thread.Sleep(1000);
+                               
+                                bool bFound = false;
+                                int count = 0;
+                                for (int j=0;j<vm.SearchPages;i++)
+                                {
+                                    var list = driver.FindElements(By.TagName("a"));
+                                    foreach (WebElement el in list)
+                                    {
+                                        if (el == null)
+                                        {
+                                            continue;
+                                        }
+                                        String link = el.GetAttribute("href");
+                                        if (link != null && link.Contains(key.Id))
+                                        {
+                                            //is not ad
+
+                                            if (IsAdvertiseItem(driver) == false)
+                                            {
+                                                bFound = true;
+                                                driver.SwitchTo().Window(driver.WindowHandles.Last());
+                                                driver.Navigate().GoToUrl(link);
+                                                WebDriverExtensions.ScrollToRandom(driver, vm.TimeOnPage);
+                                                if (favoriteCollection.Contains(u))
+                                                {
+                                                    var addfavorite = WebDriverExtensions.FindElement(driver, By.XPath("//*[@id=\"listing-right-column\"]/div/div[1]/div[1]/div/div/div[2]/button"), 10);
+                                                    addfavorite.Click();
+                                                }
+
+                                                if (chatrandcollection.Contains(u))
+                                                {
+                                                    var Chat = WebDriverExtensions.FindElement(driver, By.XPath("//*[@id=\"desktop_shop_owners_parent\"]/div/div/a"), 10);
+                                                    Chat.Click();
+
+                                                    var message = WebDriverExtensions.FindElement(driver, By.XPath("//*[@id=\"chat-ui-composer\"]/div[1]/div[1]/textarea"), 1000);
+                                                    var chattext = ChatText();
+                                                    Random randchat = new Random();
+                                                    int r2 = randchat.Next(chattext.Count);
+                                                    message.SendKeys(chattext[r2]);
+                                                    var sentmessage = WebDriverExtensions.FindElement(driver, By.XPath("//*[@id=\"chat-ui-composer\"]/div[1]/div[2]/button"), 1000);
+                                                    sentmessage.Click();
+                                                    Thread.Sleep(2000);
+                                                }
+
+                                                break;
+                                            }
+                                        }
+
+                                    }
+                                    if (!bFound && count < (vm.SearchPages-1))
+                                    {
+                                        var nextpage = WebDriverExtensions.FindElement(driver, By.XPath("//*[@id=\"content\"]/div/div[1]/div/div[3]/div[8]/div[2]/div[13]/div/div/div/div[2]/nav/ul/li[11]/a"), 10);
+                                        nextpage.Click();
+                                        Thread.Sleep(2000);
+                                    }
+                                    else
+                                    {
+                                        MessageBox.Show("Can not found any items in the search list");
+                                    }
+                                    count++;
+                                }
+                               
                             }
+                            else
+                            {
+                                MessageBox.Show("The profile " + u.UserName + " is not login.Please login manual");
+                            }
+                            driver.Quit();
+                            
+                        }
+                        catch (SystemException exx)
+                        {
+
                         }
 
                     }
-                    if (!bFound)
-                    {
-                        MessageBox.Show("Can not found any items in the search list");
-                    }
+
                 }
 
             }
@@ -411,6 +546,43 @@ namespace ETSYBUYER.Commands
                 }
 
             }
+        }
+        public static void LoginManual(object obj)
+        {
+            MainWindow v = obj as MainWindow;
+            if (v != null)
+            {
+                MainWindowViewModels vm = v.DataContext as MainWindowViewModels;
+                foreach (var user in vm.SelectedUser)
+                {
+                    try
+                    {
+                        var chromeDriverPath = AppDomain.CurrentDomain.BaseDirectory;
+                        var options = new ChromeOptions();
+                        options.AddArgument("no-sandbox");
+                        options.AddArgument("user-data-dir=" + ProfileFolder + "/" + user.UserName);
+
+                        //options.AddArgument("headless");
+                        var driver = new ChromeDriver(chromeDriverPath, options);
+
+                        string url = "https://www.etsy.com/";
+                        driver.Url = url;
+
+                        driver.Navigate().GoToUrl(url);
+                        var signin = driver.FindElement(By.XPath("//*[@id=\"gnav-header-inner\"]/div[4]/nav/ul/li[1]/button"));
+                        signin.Click();
+                        driver.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(10);
+                    }
+                    catch { }
+                    
+                }
+            }
+        }
+        public static List<string> ChatText()
+        {
+            List<string> chattext = new List<string>();
+            chattext= File.ReadAllLines(AppDomain.CurrentDomain.BaseDirectory + "/ChatText.txt").ToList();
+            return chattext;
         }
     }
 }

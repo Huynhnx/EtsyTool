@@ -21,11 +21,18 @@
                     <ColumnDefinition />
                     <ColumnDefinition />
                 </Grid.ColumnDefinitions>
-                <ListView Margin="10" Name="lvUsers" ItemsSource="{Binding Users}">
+                <ListView Margin="10" Name="lvUsers" ItemsSource="{Binding Users}" SelectionMode="Multiple" SelectedItem="{Binding SelectedUser}">
                     <ListView.View>
                         <GridView>
-                            <GridViewColumn Header="User" Width="120" DisplayMemberBinding="{Binding UserName}" />
-                            <GridViewColumn Header="Password" Width="120" DisplayMemberBinding="{Binding Password}" />
+                            <GridViewColumn Header="Profile Path" Width="300" DisplayMemberBinding="{Binding ProfilePath}" />
+                            <!--<GridViewColumn Header="Password" Width="120" DisplayMemberBinding="{Binding Password}" />-->
+                            <!--<GridViewColumn Header="Already Login" Width="120">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <CheckBox IsEnabled="False" IsChecked="{Binding AlreadyLogin}"/>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>-->
                         </GridView>
                     </ListView.View>
                 </ListView>
@@ -43,9 +50,18 @@
                         <RowDefinition />
                         <RowDefinition />
                         <RowDefinition />
+                        <RowDefinition />
                     </Grid.RowDefinitions>
                     <Label Content="Loop Numbers" VerticalAlignment="Center"/>
                     <TextBox Text="{Binding Loopnumber, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" TextAlignment="Left" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"  Height="40" Margin="103,24,49,24"/>
+                    <Label Grid.Row="1" Content="Favorite rate" VerticalAlignment="Center"/>
+                    <TextBox Grid.Row="1" Text="{Binding FavoriteRate, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PreviewTextInput="TextBox_PreviewTextInput" TextAlignment="Left" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"  Height="40" Margin="103,24,49,24"/>
+                    <Label Grid.Row="2" Content="Chat rate" VerticalAlignment="Center"/>
+                    <TextBox Grid.Row="2" Text="{Binding ChatRate, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PreviewTextInput="TextBox_PreviewTextInput_1" TextAlignment="Left" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"  Height="40" Margin="103,24,49,24"/>
+                    <Label Grid.Row="3" Content="Time On Page(s)" VerticalAlignment="Center"/>
+                    <TextBox Grid.Row="3" Text="{Binding TimeOnPage, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PreviewTextInput="TextBox_PreviewTextInput_2"  TextAlignment="Left" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"  Height="40" Margin="103,24,49,24"/>
+                    <Label Grid.Row="4" Content="Search Pages" VerticalAlignment="Center"/>
+                    <TextBox Grid.Row="4" Text="{Binding SearchPages, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PreviewTextInput="TextBox_PreviewTextInput_2"  TextAlignment="Left" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"  Height="40" Margin="103,24,49,24"/>
                 </Grid>
 
             </Grid>
