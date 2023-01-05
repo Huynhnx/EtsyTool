@@ -63,17 +63,30 @@ namespace ETSYBUYER.ViewModels
                 RaisePropertyChanged("Loopnumber");
             }
         }
-        private int timeonpage = 20;
-        public int TimeOnPage
+        private int timeonpagefrom = 10;
+        public int TimeOnPageFrom
         {
             get
             {
-                return timeonpage;
+                return timeonpagefrom;
             }
             set
             {
-                timeonpage = value;
-                RaisePropertyChanged("TimeOnPage");
+                timeonpagefrom = value;
+                RaisePropertyChanged("TimeOnPageFrom");
+            }
+        }
+        private int timeonpageto = 20;
+        public int TimeOnPageTo
+        {
+            get
+            {
+                return timeonpageto;
+            }
+            set
+            {
+                timeonpageto = value;
+                RaisePropertyChanged("TimeOnPageTo");
             }
         }
         private int searchpages = 2;
@@ -115,6 +128,26 @@ namespace ETSYBUYER.ViewModels
                 RaisePropertyChanged("ChatRate");
             }
         }
+
+
+        private string logtext = "";
+        public string LogText
+        {
+            get
+            {
+                return logtext;
+            }
+            set
+            {
+                if (logtext != value)
+                {
+                    logtext = value;
+                    RaisePropertyChanged("LogText");
+                }
+            }
+        }
+
+
         public RelayCommand Run { get; set; }
         public RelayCommand ImportUser { get; set; }
         public RelayCommand ImportKeyPair { get; set; }

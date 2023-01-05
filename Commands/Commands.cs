@@ -13,6 +13,7 @@ using OpenQA.Selenium;
 using System.Threading;
 using OpenQA.Selenium.Support.UI;
 using System.Diagnostics;
+using System.Windows.Data;
 
 namespace ETSYBUYER.Commands
 {
@@ -20,34 +21,57 @@ namespace ETSYBUYER.Commands
     {
         public static IWebElement FindElement(this IWebDriver driver, By by, int timeoutInSeconds)
         {
-            if (timeoutInSeconds > 0)
+            try
             {
-                var wait = new WebDriverWait(driver, TimeSpan.FromSeconds(timeoutInSeconds));
-                return wait.Until(drv => drv.FindElement(by));
+                if (timeoutInSeconds > 0)
+                {
+
+                    var wait = new WebDriverWait(driver, TimeSpan.FromSeconds(timeoutInSeconds));
+                    IWebElement el = wait.Until(drv => drv.FindElement(by));
+                    return el;
+                }
+
+
+
+                return driver.FindElement(by);
             }
-            return driver.FindElement(by);
+            catch (System.Exception ex)
+            {
+                return null;
+            }
         }
         public static void ScrollToRandom(IWebDriver driver, int timeonpage)
         {
-            long scrollHeight = 0;
-            IJavaScriptExecutor js1 = (IJavaScriptExecutor)driver;
-            var hight= (long)js1.ExecuteScript("return document.body.scrollHeight;");
-            Stopwatch stopWatch = new Stopwatch();
-            stopWatch.Start();
-            long newScrollHeight = 0;
-            do
-            {   
-                IJavaScriptExecutor js = (IJavaScriptExecutor)driver;
-                
-                newScrollHeight += hight / 10; 
-                js.ExecuteScript("window.scrollTo(0,'"+ newScrollHeight+"');");
-
-                if (stopWatch.ElapsedMilliseconds/1000 >= timeonpage)
+            MainWindow.log4.Info("ScrollToRandom");
+            try
+            {
+                IJavaScriptExecutor js1 = (IJavaScriptExecutor)driver;
+                var hight = (long)js1.ExecuteScript("return document.body.scrollHeight;");
+                Stopwatch stopWatch = new Stopwatch();
+                stopWatch.Start();
+                long newScrollHeight = 0;
+                do
                 {
-                    break;
-                }
-            } while (true);
-            stopWatch.Stop();
+                    IJavaScriptExecutor js = (IJavaScriptExecutor)driver;
+                    // Random random = new Random();
+                    // newScrollHeight= (long)random.Next(1,(int)hight);
+                    newScrollHeight += hight / 10;
+                    Thread.Sleep((timeonpage * 1000) / 10);
+                    js.ExecuteScript("window.scrollTo(0,'" + newScrollHeight + "');");
+
+                    if (stopWatch.Elapsed.TotalSeconds >= timeonpage)
+                    {
+                        break;
+                    }
+
+                } while (true);
+                stopWatch.Stop();
+            }
+            catch (System.Exception ex)
+            {
+                MainWindow.log4.Error(ex.Message);
+            }
+           
         }
        
     }
@@ -300,18 +324,26 @@ namespace ETSYBUYER.Commands
         {
             try
             {
-                var signin = WebDriverExtensions.FindElement(driver, By.XPath("//*[@id=\"gnav-header-inner\"]/div[4]/nav/ul/li[1]/button"), 5);
+                MainWindow.log4.Info("Double-check for login!!!");
+                var signin = driver.FindElement(By.XPath("//*[@id=\"gnav-header-inner\"]/div[4]/nav/ul/li[1]/button"), 5);
+                if (signin == null)
+                {
+                    MainWindow.log4.Info("Already login");
+                    return true;
+                }
+                MainWindow.log4.Info("Not Login yet");
                 return false;
             }
             catch(System.Exception ex)
             {
-
+                MainWindow.log4.Error(ex);
             }
             
             return true;
         }
         public static bool IsAdvertiseItem(ChromeDriver driver)
         {
+            MainWindow.log4.Info("IsAdvertiseItem?");
             IWebElement ad = null;
             try
             {
@@ -323,12 +355,14 @@ namespace ETSYBUYER.Commands
             }
             if (ad == null)
             {
+                MainWindow.log4.Info("Not An Advertise?");
                 return false;
             }
             return true;
         }
         public static void Run(object obj)
         {
+            string log = "";
             MainWindow v = obj as MainWindow;
             if (v != null)
             {
@@ -342,6 +376,8 @@ namespace ETSYBUYER.Commands
                             Random rand = new Random();
                             int r = rand.Next(vm.Users.Count);
                             User u = vm.Users[r];
+                            log += "Ran profile: " + u.ProfilePath;
+                            MainWindow.log4.Info("Ran profile: " + u.ProfilePath);
                             var chromeDriverPath = AppDomain.CurrentDomain.BaseDirectory;
                             var username = System.Environment.GetEnvironmentVariable("USERNAME");
                             var ProfileFolder = "C:/Users/" + username + "/AppData/Local/Google/Chrome/User Data";
@@ -349,10 +385,12 @@ namespace ETSYBUYER.Commands
                             options.AddArgument("user-data-dir="+ ProfileFolder);
                             options.AddArgument("profile-directory="+ u.ProfilePath);
                             //options.AddArgument("headless");
+                            MainWindow.log4.Info("Create Chrome Driver Instance");
                             var driver = new ChromeDriver(chromeDriverPath,options);
+                            MainWindow.log4.Info("Done!!!");
                             string url = "https://www.etsy.com/";
                             driver.Url = url;
-
+                            MainWindow.log4.Info("Navigate to Etsy.com");
                             driver.Navigate().GoToUrl(url);
                             //Chat rate
                             var chatrand = new Random();
@@ -362,22 +400,27 @@ namespace ETSYBUYER.Commands
                             //favorite
                             var favoriterand = new Random();
                             var favoriteCollection = vm.Users.OrderBy(x => rand.Next(vm.Users.Count))
-                                                           .Take((int)((float)(vm.FavoriteRate / 100) * vm.Users.Count)).ToList();
+                                                      .Take((int)((float)(vm.FavoriteRate / 100) * vm.Users.Count)).ToList();
                             if (IsLogin(driver))
                             {
                                 //search item
+                                MainWindow.log4.Info("Send Search Key:"+ key.SearchKey);
                                 var search = WebDriverExtensions.FindElement(driver, By.XPath("//*[@id=\"global-enhancements-search-query\"]"), 20);
                                 search.SendKeys(key.SearchKey);
                                 Thread.Sleep(1000);
-                                var searchbtn = WebDriverExtensions.FindElement(driver, By.XPath("//*[@id=\"gnav-search\"]/div/div[1]/button[2]"), 10);
+                                var searchbtn = WebDriverExtensions.FindElement(driver, By.XPath("//*[@id=\"gnav-search\"]/div/div[1]/button[2]"), 100);
                                 searchbtn.Click();
                                 Thread.Sleep(1000);
                                
                                 bool bFound = false;
                                 int count = 0;
-                                for (int j=0;j<vm.SearchPages;i++)
+                                for (int j=0;j<vm.SearchPages;j++)
                                 {
-                                    var list = driver.FindElements(By.TagName("a"));
+                                    MainWindow.log4.Info("Search in the page number "+(j+1).ToString());
+                                    //var list = driver.FindElements(By.TagName("a"));
+                                    var x = driver.FindElement(By.CssSelector("#content > div > div.wt-bg-white.wt-grid__item-md-12.wt-pl-xs-1.wt-pr-xs-0.wt-pr-md-1.wt-pl-lg-0.wt-pr-lg-0.wt-bb-xs-1 > div > div.wt-mt-xs-3.wt-text-black > div.wt-grid.wt-pl-xs-0.wt-pr-xs-0.search-listings-group > div:nth-child(2) > div.wt-bg-white.wt-display-block.wt-pb-xs-2.wt-mt-xs-0 > div:nth-child(1) > div > div"));
+                                    MainWindow.log4.Info("Find element in grid result");
+                                    var list= x.FindElements(By.TagName("a"));
                                     foreach (WebElement el in list)
                                     {
                                         if (el == null)
@@ -388,56 +431,113 @@ namespace ETSYBUYER.Commands
                                         if (link != null && link.Contains(key.Id))
                                         {
                                             //is not ad
-
+                                            MainWindow.log4.Info("Found the Item");
                                             if (IsAdvertiseItem(driver) == false)
                                             {
+                                                log += "Found Item" +"Keyword Search:" + key.SearchKey + " Listing ID:" + key.Id + "On Page "+(j+1).ToString()+"\n";
                                                 bFound = true;
                                                 driver.SwitchTo().Window(driver.WindowHandles.Last());
                                                 driver.Navigate().GoToUrl(link);
-                                                WebDriverExtensions.ScrollToRandom(driver, vm.TimeOnPage);
+                                                MainWindow.log4.Info("Navigate to Item");
+                                                Random time = new Random();
+                                                int timeonpage = time.Next(vm.TimeOnPageFrom, vm.TimeOnPageTo);
+                                                log += "Time On Page: " + timeonpage.ToString() ;
+                                                WebDriverExtensions.ScrollToRandom(driver, timeonpage);
                                                 if (favoriteCollection.Contains(u))
                                                 {
-                                                    var addfavorite = WebDriverExtensions.FindElement(driver, By.XPath("//*[@id=\"listing-right-column\"]/div/div[1]/div[1]/div/div/div[2]/button"), 10);
-                                                    addfavorite.Click();
+                                                    MainWindow.log4.Info("Add favourite");
+                                                    try
+                                                    {
+                                                        var addfavorite = WebDriverExtensions.FindElement(driver, By.XPath("//*[@id=\"listing-right-column\"]/div/div[1]/div[1]/div/div/div[2]/button"), 100);
+                                                        log += "Favourite: Yes";
+                                                        addfavorite.Click();
+                                                    }
+                                                    catch(System.Exception ex)
+                                                    {
+                                                        MainWindow.log4.Error(ex.Message);
+                                                    }
+                                                   
+                                                }
+                                                else
+                                                {
+                                                    log += "Favourite: No";
                                                 }
 
                                                 if (chatrandcollection.Contains(u))
                                                 {
-                                                    var Chat = WebDriverExtensions.FindElement(driver, By.XPath("//*[@id=\"desktop_shop_owners_parent\"]/div/div/a"), 10);
-                                                    Chat.Click();
+                                                    MainWindow.log4.Info("Chat");
+                                                    try
+                                                    {
+                                                        var Chat = WebDriverExtensions.FindElement(driver, By.XPath("//*[@id=\"desktop_shop_owners_parent\"]/div/div/a"), 100);
+                                                        Chat.Click();
 
-                                                    var message = WebDriverExtensions.FindElement(driver, By.XPath("//*[@id=\"chat-ui-composer\"]/div[1]/div[1]/textarea"), 1000);
-                                                    var chattext = ChatText();
-                                                    Random randchat = new Random();
-                                                    int r2 = randchat.Next(chattext.Count);
-                                                    message.SendKeys(chattext[r2]);
-                                                    var sentmessage = WebDriverExtensions.FindElement(driver, By.XPath("//*[@id=\"chat-ui-composer\"]/div[1]/div[2]/button"), 1000);
-                                                    sentmessage.Click();
-                                                    Thread.Sleep(2000);
+                                                        var message = WebDriverExtensions.FindElement(driver, By.XPath("//*[@id=\"chat-ui-composer\"]/div[1]/div[1]/textarea"), 100);
+                                                        var chattext = ChatText();
+                                                        Random randchat = new Random();
+                                                        int r2 = randchat.Next(chattext.Count);
+                                                        message.SendKeys(chattext[r2]);
+                                                        var sentmessage = WebDriverExtensions.FindElement(driver, By.XPath("//*[@id=\"chat-ui-composer\"]/div[1]/div[2]/button"), 100);
+                                                        sentmessage.Click();
+                                                        MainWindow.log4.Info("Send message:" + chattext[r2]);
+                                                        Thread.Sleep(2000);
+                                                        log += "Chat:" + chattext[r2];
+                                                    }
+                                                    catch (System.Exception ex)
+                                                    {
+                                                        MainWindow.log4.Error(ex.Message);
+                                                    }
+                                                    
                                                 }
 
                                                 break;
                                             }
                                         }
-
+                                       
+                                    }
+                                    if (bFound)
+                                    {
+                                        break;
                                     }
                                     if (!bFound && count < (vm.SearchPages-1))
                                     {
-                                        var nextpage = WebDriverExtensions.FindElement(driver, By.XPath("//*[@id=\"content\"]/div/div[1]/div/div[3]/div[8]/div[2]/div[13]/div/div/div/div[2]/nav/ul/li[11]/a"), 10);
-                                        nextpage.Click();
-                                        Thread.Sleep(2000);
+                                        var xpath = "/html/body/main/div/div[1]/div/div[3]/div[8]/div[2]/div[13]/div/div/div/div[2]/nav/ul/li[" + (count + 3).ToString() + "]/a";
+                                        //var n = driver.FindElement(By.XPath(xpath));
+                                        //Thread.Sleep(1000);
+                                        try
+                                        {
+                                            MainWindow.log4.Info("Navigate to next page");
+                                            var nextpage = WebDriverExtensions.FindElement(driver, By.XPath(xpath), 10);
+                                            if (nextpage != null)
+                                            {
+                                                nextpage.Click();
+                                                Thread.Sleep(2000);
+                                            }
+                                            else
+                                            {
+                                                break;
+                                            }
+                                        }
+                                        catch (System.Exception ex)
+                                        {
+                                            
+                                            MainWindow.log4.Error(ex.Message);
+                                            break;
+                                        }
+                                       
+                                        
                                     }
                                     else
                                     {
-                                        MessageBox.Show("Can not found any items in the search list");
+                                        log += "Not Found Keyword Search:" + key.SearchKey + " Listing ID:" + key.Id ;
                                     }
+                                    
                                     count++;
                                 }
                                
                             }
                             else
                             {
-                                MessageBox.Show("The profile " + u.UserName + " is not login.Please login manual");
+                                log += "The profile " + u.UserName + " is not login.Please login manual first";
                             }
                             driver.Quit();
                             
@@ -450,7 +550,7 @@ namespace ETSYBUYER.Commands
                     }
 
                 }
-
+                vm.LogText = log;
             }
         }
         public static void ImportUser(object obj)
@@ -459,7 +559,6 @@ namespace ETSYBUYER.Commands
             if (v != null)
             {
                 MainWindowViewModels vm = v.DataContext as MainWindowViewModels;
-
                 List<User> users = ImportUserFromExcel();
                 vm.Users = users;
 

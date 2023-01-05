@@ -21,17 +21,21 @@ using System.Windows.Shapes;
 using ETSYBUYER.ViewModels;
 using SearchOption = System.IO.SearchOption;
 using System.Text.RegularExpressions;
+using log4net;
 
 namespace ETSYBUYER
 {
+    
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
     public partial class MainWindow : Window
     {
-        
+        public static readonly log4net.ILog log4
+       = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
         public MainWindow()
         {
+            log4.Info("Start App");
             InitializeComponent();
             MainWindowViewModels vm = new MainWindowViewModels();
             vm.GenerateChromeProfile = new Commands.RelayCommand(Commands.Commands.GenerateChromeProfileCmd);
@@ -60,5 +64,6 @@ namespace ETSYBUYER
             e.Handled= !IsValid(((TextBox)sender).Text + e.Text);
 
         }
+
     }
 }

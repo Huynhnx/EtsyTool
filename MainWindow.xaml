@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:ETSYBUYER"
+        xmlns:scroll="clr-namespace:ToolBuyerForEtsy.Commands"
         mc:Ignorable="d"
         Title="Etsy Buyer Tool"
         WindowState="Maximized"
@@ -17,33 +18,54 @@
         <GroupBox Grid.Row="0" Header="Configuration">
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition />
-                    <ColumnDefinition />
+                    <ColumnDefinition Width="2*"/>
                     <ColumnDefinition />
                 </Grid.ColumnDefinitions>
-                <ListView Margin="10" Name="lvUsers" ItemsSource="{Binding Users}" SelectionMode="Multiple" SelectedItem="{Binding SelectedUser}">
-                    <ListView.View>
-                        <GridView>
-                            <GridViewColumn Header="Profile Path" Width="300" DisplayMemberBinding="{Binding ProfilePath}" />
-                            <!--<GridViewColumn Header="Password" Width="120" DisplayMemberBinding="{Binding Password}" />-->
-                            <!--<GridViewColumn Header="Already Login" Width="120">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="2*"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition />
+                        </Grid.ColumnDefinitions>
+                        <ListView Margin="10" Name="lvUsers" ItemsSource="{Binding Users}" SelectionMode="Multiple" SelectedItem="{Binding SelectedUser}">
+                            <ListView.View>
+                                <GridView>
+                                    <GridViewColumn Header="Profile Path" Width="300" DisplayMemberBinding="{Binding ProfilePath}" />
+                                    <!--<GridViewColumn Header="Password" Width="120" DisplayMemberBinding="{Binding Password}" />-->
+                                    <!--<GridViewColumn Header="Already Login" Width="120">
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate>
                                         <CheckBox IsEnabled="False" IsChecked="{Binding AlreadyLogin}"/>
                                     </DataTemplate>
                                 </GridViewColumn.CellTemplate>
                             </GridViewColumn>-->
-                        </GridView>
-                    </ListView.View>
-                </ListView>
-                <ListView Margin="10" Name="SearchingList" Grid.Column="1" ItemsSource="{Binding SearchPair}">
-                    <ListView.View >
-                        <GridView>
-                            <GridViewColumn Header="Text" Width="120" DisplayMemberBinding="{Binding SearchKey}" />
-                            <GridViewColumn Header="Listing Id" Width="120" DisplayMemberBinding="{Binding Id}" />
-                        </GridView>
-                    </ListView.View>
-                </ListView>
+                                </GridView>
+                            </ListView.View>
+                        </ListView>
+                        <ListView Margin="10" Name="SearchingList" Grid.Column="1" ItemsSource="{Binding SearchPair}">
+                            <ListView.View >
+                                <GridView>
+                                    <GridViewColumn Header="Text" Width="120" DisplayMemberBinding="{Binding SearchKey}" />
+                                    <GridViewColumn Header="Listing Id" Width="120" DisplayMemberBinding="{Binding Id}" />
+                                </GridView>
+                            </ListView.View>
+                        </ListView>
+                    </Grid>
+                    <Grid Grid.Row="1">
+                        <TextBox Margin="10" Text="{Binding LogText, UpdateSourceTrigger=PropertyChanged}" TextWrapping="Wrap">
+                        </TextBox>
+                        <!--<ScrollViewer scroll:ScrollViewerEx.AutoScrollToEnd="True">
+                            <TextBlock Margin="10" Text="{Binding LogText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" TextWrapping="Wrap" ScrollViewer.CanContentScroll="True">
+                            </TextBlock>
+                        </ScrollViewer>-->
+                    </Grid>
+
+                </Grid>
+                       
                 <Grid Grid.Column="2">
                     <Grid.RowDefinitions>
                         <RowDefinition />
@@ -58,8 +80,14 @@
                     <TextBox Grid.Row="1" Text="{Binding FavoriteRate, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PreviewTextInput="TextBox_PreviewTextInput" TextAlignment="Left" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"  Height="40" Margin="103,24,49,24"/>
                     <Label Grid.Row="2" Content="Chat rate" VerticalAlignment="Center"/>
                     <TextBox Grid.Row="2" Text="{Binding ChatRate, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PreviewTextInput="TextBox_PreviewTextInput_1" TextAlignment="Left" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"  Height="40" Margin="103,24,49,24"/>
-                    <Label Grid.Row="3" Content="Time On Page(s)" VerticalAlignment="Center"/>
-                    <TextBox Grid.Row="3" Text="{Binding TimeOnPage, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PreviewTextInput="TextBox_PreviewTextInput_2"  TextAlignment="Left" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"  Height="40" Margin="103,24,49,24"/>
+
+                    <StackPanel Grid.Row="3"  Orientation="Horizontal">
+                        <Label  Content="Time On Page(s) From" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                        <TextBox Text="{Binding TimeOnPageFrom, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PreviewTextInput="TextBox_PreviewTextInput_2"  TextAlignment="Left" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"  Height="40" Width="60" Margin="10"/>
+                        <Label  Content="To" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                        <TextBox Text="{Binding TimeOnPageTo, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PreviewTextInput="TextBox_PreviewTextInput_2"  TextAlignment="Left" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"  Height="40" Width="60" Margin="10"/>
+                    </StackPanel>
+                    
                     <Label Grid.Row="4" Content="Search Pages" VerticalAlignment="Center"/>
                     <TextBox Grid.Row="4" Text="{Binding SearchPages, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PreviewTextInput="TextBox_PreviewTextInput_2"  TextAlignment="Left" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"  Height="40" Margin="103,24,49,24"/>
                 </Grid>
